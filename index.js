@@ -1,12 +1,51 @@
 const express = require("express");
+const cors = require("cors");
 const executarSQL = require("./services");
 const app = express();
 
+app.use(cors());
 app.use(express.json()); // converte diretamente para JS
 
 app.get("/", (req, res) => {
     res.send("Olá mundo");
 })
+
+app.post("/login", async (req, res) => {
+    try {
+        const { email, senha } = req.body;
+
+        const emailExiste = await executarSQL(`SELECT * FROM usuarios WHERE email = '${email}'`);
+        
+        if(emailExiste.rowCount == 0){
+            res.json({
+                tipo: "warning",
+                mensagem: "Email ou senha incorreto"
+            });
+            return;
+        }
+        
+        if(emailExiste.rows[0].senha != senha){
+            res.json({
+                tipo: "warning",
+                mensagem: "Email ou senha incorreto"
+            });
+            return;
+        }
+
+        delete emailExiste.rows[0].senha; 
+        
+        res.json({
+            tipo: "success",
+            mensagem: "Login realizado com sucesso",
+            usuario: emailExiste.rows[0]
+        });
+        
+    } catch (error) {
+        res.json({
+            mensagem: error.message
+        })
+    }
+});
 
 app.get("/usuarios", async (req, res) => {
     try {
@@ -104,7 +143,15 @@ app.delete("/usuarios/:id", async (req, res) => {
 
 app.get("/tarefas", async (req, res) => {
     try {
-        const query = await executarSQL("SELECT * FROM tarefas;");
+        const { id } = req.query;
+
+        let query = null;
+        if (id){
+            query = await executarSQL(`SELECT * FROM tarefas WHERE usuario_id = ${id};`);
+        } else{
+            query = await executarSQL("SELECT * FROM tarefas;");
+        }
+
         res.json(query.rows);
     } catch (error) {
         res.json({
@@ -171,7 +218,7 @@ app.delete("/tarefas/:id", async (req, res) => {
         if(query.rowCount > 0){
             res.json({
                 tipo: "success",
-                mensagem: "Registro deletada com sucesso"
+                mensagem: "Registro deletado com sucesso"
             });
         } else{
             res.json({
@@ -187,7 +234,9 @@ app.delete("/tarefas/:id", async (req, res) => {
 })
 
 app.use((req, res) => {
-    res.status(404).send("Rota não encontrada")
+    res.status(404).json({
+        mensagem: "Rota não encontrada"
+    })
 });
 
 app.listen(3000, () => {
