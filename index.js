@@ -102,6 +102,90 @@ app.delete("/usuarios/:id", async (req, res) => {
     }
 })
 
+app.get("/tarefas", async (req, res) => {
+    try {
+        const query = await executarSQL("SELECT * FROM tarefas;");
+        res.json(query.rows);
+    } catch (error) {
+        res.json({
+            mensagem: error.message
+        })
+    }
+});
+
+app.post("/tarefas", async (req, res) => {
+    try {
+        const { titulo, descricao, usuario_id } = req.body;
+
+        const query = await executarSQL(`INSERT INTO tarefas (titulo, descricao, usuario_id) VALUES ($1, $2, $3) RETURNING *;`, [titulo, descricao, usuario_id]);
+
+        if(query.rowCount > 0){
+            res.json({
+                tipo: "success",
+                mensagem: "Registro criado com sucesso"
+            });
+        } else{
+            res.json({
+                tipo: "warning",
+                mensagem: "Falha ao criar registro"
+            });
+        }
+    } catch (error) {
+        res.json({
+            mensagem: error.message
+        })
+    }
+})
+
+app.put("/tarefas/:id", async (req, res) => {
+    try {
+        const { titulo, descricao, usuario_id } = req.body;
+        const { id } = req.params;
+
+        const query = await executarSQL(`UPDATE tarefas SET titulo=$1, descricao=$2, usuario_id=$3 WHERE id = ${id}  RETURNING *;`, [titulo, descricao, usuario_id]);
+
+        if(query.rowCount > 0){
+            res.json({
+                tipo: "success",
+                mensagem: "Registro atualizada com sucesso"
+            });
+        } else{
+            res.json({
+                tipo: "warning",
+                mensagem: "Falha ao atualizar registro"
+            });
+        }
+    } catch (error) {
+        res.json({
+            mensagem: error.message
+        })
+    }
+})
+
+app.delete("/tarefas/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = await executarSQL(`DELETE FROM tarefas WHERE id = ${id}  RETURNING *;`);
+
+        if(query.rowCount > 0){
+            res.json({
+                tipo: "success",
+                mensagem: "Registro deletada com sucesso"
+            });
+        } else{
+            res.json({
+                tipo: "warning",
+                mensagem: "Falha ao deletar registro"
+            });
+        }
+    } catch (error) {
+        res.json({
+            mensagem: error.message
+        })
+    }
+})
+
 app.use((req, res) => {
     res.status(404).send("Rota não encontrada")
 });
